@@ -43,6 +43,7 @@ mkdir -p "$DEST_DIR"
 
 shopt -s nullglob globstar # claude says this prevent errors in case of no md files
 for file in "$TMP_DIR"/**/*.md; do
+    [[ "$file" == "$TMP_DIR/tui/"* ]] && continue
     echo "cp -f $file $DEST_DIR/"
     cp -f "$file" "$DEST_DIR/"
 done
