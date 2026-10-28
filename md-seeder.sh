@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# DEFAULT VARS
-BRANCH="master"  # or tag, is the same
-REPO_URL=""
+# DEFAULTS
+BRANCH="main"  # you can use tags and versions as well
+REPO_URL="git@github.com:SalemSaberhagen13/md-seeder.git"
 SSH_KEY=""
 FLAT=false
 DELETE_EXISTING=false
@@ -11,33 +11,31 @@ DEST_DIR="$(pwd)/.claude"
 
 usage() {
     cat <<EOF
-Use: $0 -r <git@github.com:user/repo.git> [-b <branch>] [-k <path_ssh_key>] [-f] [-d] [-h]
+Use: $0 [-r <git@github.com:user/repo.git>] [-b <branch>] [-k <path_ssh_key>] [-o <output_dir>] [-f] [-d] [-h]
 
 Options:
-  -r <repo_url>      Git repository URL to clone (required)
+  -r <repo_url>      Git repository URL to clone (default: $REPO_URL)
   -b <branch>        Branch or tag to clone (default: master)
   -k <path_ssh_key>  Path to SSH private key (optional; uses ssh-agent by default)
-  -f                 Flatten: copy all .md files directly into .claude/ without subfolders
-  -d                 Delete existing .md files in .claude/ before copying new ones
+  -o <output_dir>    Output folder to copy .md files into (default: $(pwd)/.claude)
+  -f                 Flatten: copy all .md files directly into the output folder without subfolders
+  -d                 Delete existing .md files in the output folder before copying new ones
   -h                 Show this help message and exit
 EOF
     exit 1
 }
 
-while getopts "r:b:k:fdh" opt; do
+while getopts "r:b:k:o:fdh" opt; do
     case "$opt" in
         r) REPO_URL="$OPTARG" ;;      # -r git@github...
         b) BRANCH="$OPTARG" ;;        # -b master
         k) SSH_KEY="$OPTARG" ;;       # -k ~/.ssh/id_ed25519
-        f) FLAT=true ;;               # -f flatten into .claude/
-        d) DELETE_EXISTING=true ;;    # -d delete existing .md files in .claude/
+        o) DEST_DIR="$OPTARG" ;;      # -o /path/to/output
+        f) FLAT=true ;;               # -f flatten into output folder
+        d) DELETE_EXISTING=true ;;    # -d delete existing .md files in output folder
         *) usage ;;                   # you failed
     esac
 done
-
-if [[ -z "$REPO_URL" ]] ; then  # You failed miserably
-    usage
-fi
 
 cat <<'EOF'
                _                         _
@@ -48,6 +46,8 @@ cat <<'EOF'
 EOF
 
 TMP_DIR=$(mktemp -d)  # Creates folder under /tmp . Command is evaluated as a path.
+MD_DIR="$TMP_DIR/md_files"
+
 # Cleans stuff if something fails for whatever reason. Even if it is temporary
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -63,7 +63,7 @@ fi
 
 mkdir -p "$DEST_DIR"
 
-shopt -s nullglob globstar # This prevents errors in case of no md files
+shopt -s nullglob globstar # This prevents errors in absence of md files
 
 if [[ "$DELETE_EXISTING" == true ]]; then
     for old_file in "$DEST_DIR"/**/*.md; do
@@ -74,11 +74,8 @@ if [[ "$DELETE_EXISTING" == true ]]; then
 fi
 
 COPIED_COUNT=0
-for file in "$TMP_DIR"/**/*.md; do
-    [[ -f "$file" ]] || continue
-    [[ "$file" == "$TMP_DIR/README.md" ]] && continue  # Repo README
-    [[ "$file" == "$TMP_DIR/tui/"* ]] && continue  # Can be removed
-
+for file in "$MD_DIR"/**/*.md; do
+    [[ -f "$file" ]] || continue  # Skips folders
     if [[ "$FLAT" == true ]]; then
         echo "cp -f $file $DEST_DIR/"
         cp -f "$file" "$DEST_DIR/"
@@ -92,4 +89,4 @@ for file in "$TMP_DIR"/**/*.md; do
     COPIED_COUNT=$((COPIED_COUNT + 1))
 done
 
-echo "$COPIED_COUNT file(s) copied"
+echo "SUCCESS: $COPIED_COUNT file(s) copied in $DEST_DIR"
