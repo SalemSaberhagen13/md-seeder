@@ -39,6 +39,14 @@ if [[ -z "$REPO_URL" ]] ; then  # You failed miserably
     usage
 fi
 
+cat <<'EOF'
+               _                         _
+ _ __ ___   __| |      ___  ___  ___  __| | ___ _ __
+| '_ ` _ \ / _` |_____/ __|/ _ \/ _ \/ _` |/ _ \ '__|
+| | | | | | (_| |_____\__ \  __/  __/ (_| |  __/ |
+|_| |_| |_|\__,_|     |___/\___|\___|\__,_|\___|_|
+EOF
+
 TMP_DIR=$(mktemp -d)  # Creates folder under /tmp . Command is evaluated as a path.
 # Cleans stuff if something fails for whatever reason. Even if it is temporary
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -65,20 +73,23 @@ if [[ "$DELETE_EXISTING" == true ]]; then
     done
 fi
 
+COPIED_COUNT=0
 for file in "$TMP_DIR"/**/*.md; do
     [[ -f "$file" ]] || continue
-    [[ "$file" == "$TMP_DIR/tui/"* ]] && continue
+    [[ "$file" == "$TMP_DIR/README.md" ]] && continue  # Repo README
+    [[ "$file" == "$TMP_DIR/tui/"* ]] && continue  # Can be removed
 
     if [[ "$FLAT" == true ]]; then
         echo "cp -f $file $DEST_DIR/"
         cp -f "$file" "$DEST_DIR/"
     else
-        rel_path="${file#"$TMP_DIR"/}"
+        rel_path="${file#"$TMP_DIR"/}"  # Where file is in given path. Cool
         target_file="$DEST_DIR/$rel_path"
         mkdir -p "$(dirname "$target_file")"
         echo "cp -f $file $target_file"
         cp -f "$file" "$target_file"
     fi
+    COPIED_COUNT=$((COPIED_COUNT + 1))
 done
 
-echo 'Magic done'
+echo "$COPIED_COUNT file(s) copied"
