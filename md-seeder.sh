@@ -63,7 +63,7 @@ fi
 
 mkdir -p "$DEST_DIR"
 
-shopt -s nullglob globstar # claude says this prevent errors in case of no md files
+shopt -s nullglob globstar # This prevents errors in case of no md files
 
 if [[ "$DELETE_EXISTING" == true ]]; then
     for old_file in "$DEST_DIR"/**/*.md; do
